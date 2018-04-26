@@ -23,8 +23,6 @@
   template:
     src: server.conf.j2
     dest: /etc/graylog/server/server.conf
-  tags:
-    - template
 
 - name: Ensure firewalld is configured
   firewalld:
