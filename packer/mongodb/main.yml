@@ -1,0 +1,56 @@
+---
+- hosts: localhost
+  gather_facts: false
+  become: yes
+
+  tasks:
+  - name: Ensure EPEL Repo & Docker is installed
+    yum:
+      name: 
+        - epel-release
+        - docker
+      state: present
+
+  - name: Ensure python-pip is installed
+    yum:
+      name:
+        - python-pip
+      state: present
+
+  - name: Ensure docker-py is installed
+    pip:
+      name: docker-py
+      state: present
+
+  - name: Ensure Docker service is started and enabled
+    service:
+      name: docker
+      enabled: yes
+      state: started
+
+  - name: Ensure timezone is set to Australia/Sydney
+    timezone:
+      name: Australia/Sydney
+
+  - name: Ensure firewalld is configured
+    firewalld:
+      port: "{{ item }}"
+      permanent: true
+      immediate: true
+      state: enabled
+    with_items:
+      - 27000/tcp
+      - 27017/tcp
+  
+  - name: Set MongoDB Docker Container
+    docker_container:
+      name: mongodb-cluster
+      image: "mongo:latest"
+      command: mongod --replSet "rs0"
+      state: present
+      restart_policy: always
+      volumes:
+        - mongo-data:/data/db
+      published_ports:
+        - 27000:27000
+        - 27017:27017

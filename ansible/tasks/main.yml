@@ -1,0 +1,46 @@
+---
+- name: Ensure GrayLog repository is present
+  yum:
+    name: https://packages.graylog2.org/repo/packages/graylog-2.4-repository_latest.rpm
+    state: present
+
+- name: Install graylog-server, Java and Policy Util packages
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - java-1.8.0-openjdk-headless.x86_64
+    - graylog-server
+    - policycoreutils-python
+
+- name: Enable SELINUX toggles
+  seboolean:
+    name: "httpd_can_network_connect"
+    state: yes
+    persistent: yes
+
+- name: Copy graylog.conf
+  template:
+    src: server.conf.j2
+    dest: /etc/graylog/server/server.conf
+  tags:
+    - template
+
+- name: Ensure firewalld is configured
+  firewalld:
+    port: "{{ item.port }}/{{ item.protocol }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  with_items:
+    - "{{ ports }}"
+
+- name: Ensure GrayLog service is started and enabled
+  service:
+    name: graylog-server
+    enabled: yes
+    state: started
+
+- import_tasks: network.yml
+  when:
+    - vars.lb_enable == "yes"

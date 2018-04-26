@@ -1,0 +1,24 @@
+---
+- name: Configure VIP on loopback adapter
+  blockinfile:
+    path: /etc/sysconfig/network-scripts/ifcfg-lo
+    block: |
+      IPADDR1={{ lb_vip }}
+      PREFIX1=32
+
+- name: Configure ARP settings
+  blockinfile:
+    path:  /etc/sysctl.conf
+    block: |
+      net.ipv4.conf.all.arp_ignore=1
+      net.ipv4.conf.{{ ansible_default_ipv4.interface }}.arp_ignore=1
+      net.ipv4.conf.all.arp_announce=2
+      net.ipv4.conf.{{ ansible_default_ipv4.interface }}.arp_announce=2
+
+- name: Bounce Loopback interface (DOWN)
+  shell: ifdown lo
+  register: ifdown_result
+
+- name: Bounce Loopback interface (UP)
+  shell: ifup lo
+  when: ifdown_result | success

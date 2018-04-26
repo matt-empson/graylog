@@ -1,0 +1,41 @@
+{
+    "variables": {
+        "profile": "aws-apac-prod",
+        "region": "ap-southeast-2",
+        "ami_id": <insert ami id>
+    },
+    "builders": [
+        {
+            "type": "amazon-ebs",
+            "profile": "{{user `profile`}}",
+            "region": "{{user `region`}}",
+            "source_ami": "{{user `ami_id`}}",
+            "instance_type": "t2.medium",
+            "ami_name": "ElasticSearch-Cluster t2.medium {{timestamp}}",
+            "ssh_username": "centos",
+            "ssh_pty": "true",
+            "tags": {
+                "ElasticSearchCluster": "true",
+                "Name": "ElasticSearch Cluster"
+            }
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "shell",
+            "inline": "sudo yum install -y ansible",
+            "remote_folder": "/usr/tmp"
+        },
+        {
+            "type": "ansible-local",
+            "playbook_file": "main.yml",
+            "playbook_dir": "files/",
+            "staging_directory": "/usr/tmp"
+        },
+        {
+            "type": "shell",
+            "inline": "sudo yum remove -y ansible && sudo yum autoremove -y",
+            "remote_folder": "/usr/tmp"
+        }
+    ]
+}

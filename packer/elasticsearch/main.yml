@@ -1,0 +1,83 @@
+---
+- hosts: localhost
+  gather_facts: false
+  become: yes
+
+ 
+  tasks:
+  - name: Ensure EPEL Repo & Docker is installed
+    yum:
+      name: 
+        - epel-release
+        - docker
+      state: present
+
+  - name: Ensure python-pip is installed
+    yum:
+      name:
+        - python-pip
+      state: present
+
+  - name: Ensure docker-py is installed
+    pip:
+      name: docker-py
+      state: present
+
+  - name: Ensure Docker service is started and enabled
+    service:
+      name: docker
+      enabled: yes
+      state: started
+
+  - name: Ensure timezone is set to Australia/Sydney
+    timezone:
+      name: Australia/Sydney
+
+  - name: Copy elasticsearch.yml file to instance
+    copy:
+      src: elasticsearch.yml
+      dest: /tmp/elasticsearch.yml
+
+  - name: Copy Dockerfile to instance   
+    copy:
+      src: Dockerfile
+      dest: /tmp/Dockerfile 
+
+  - name: Set vm.max_map_count value in sysctl.conf
+    sysctl:
+      name: vm.max_map_count
+      value: 262144
+      state: present
+      reload: yes
+
+  - name: Set net.ipv4.ip_forward value in sysctl.conf
+    sysctl:
+      name: net.ipv4.ip_forward
+      value: 1
+      state: present
+      reload: yes
+
+  - name: Ensure firewalld is configured
+    firewalld:
+      port: "{{ item }}"
+      permanent: true
+      immediate: true
+      state: enabled
+    with_items:
+      - 9200/tcp
+      - 9300/tcp
+
+  - name: Build Docker image
+    shell: "cd /tmp && docker build -t es-image ."
+  
+  - name: Set ElasticSearch Docker Container
+    docker_container:
+      name: es-cluster
+      image: "es-image"
+      state: present
+      restart_policy: always
+      volumes:
+        - es-data:/usr/share/elasticsearch/data
+      published_ports:
+        - 9200:9200
+        - 9300:9300
